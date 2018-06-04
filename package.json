@@ -1,0 +1,20 @@
+{
+  "name": "connectwise-bench",
+  "version": "1.0.0",
+  "description": "Command line package to benchmark ConnectWise Manage",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "engines": {
+    "node": "10.3.0"
+  },
+  "dependencies": {
+    "connectwise-rest": "0.0.14",
+    "dotenv": "^5.0.1",
+    "moment": "^2.22.2",
+    "mssql": "^4.1.0"
+  }
+}
