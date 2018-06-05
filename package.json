@@ -1,6 +1,6 @@
 {
   "name": "connectwise-bench",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Command line package to benchmark ConnectWise Manage",
   "main": "index.js",
   "scripts": {

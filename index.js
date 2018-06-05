@@ -49,32 +49,41 @@ async function connectSQL() {
   }
 }
 
+async function withTest(test) {
+  const now = Date.now();
+  performance.mark(`start-test-${now}`);
+  await test();
+  performance.mark(`end-test-${now}`);
+  performance.measure(`start-test-${now} to end-test-${now}`, `start-test-${now}`, `end-test-${now}`);
+}
+
 async function testSQL() {
-  performance.mark('start-test');
-  // let pool = await sql.connect(sqlConfig);
-  let result = await pool.request()
-    .query('select count(*) as count from sr_service');
-  // pool.close();
-  performance.mark('end-test');
-  performance.measure('start-test to end-test', 'start-test', 'end-test');
+  try {
+    let result = await pool.request()
+      .query('select count(*) as count from v_api_collection_service_ticket');
+    console.log('result', result.recordset[0]);
+  } catch (error) {
+    console.log('error', (error && error.message) || (error && error.code));
+  }
 }
 
 async function testAPI() {
-  performance.mark('start-test');
-  let result = await cw.ServiceDeskAPI.Tickets.getTicketsCount({});
-  performance.mark('end-test');
-  performance.measure('start-test to end-test', 'start-test', 'end-test');
+  try {
+    let result = await cw.ServiceDeskAPI.Tickets.getTicketsCount({});
+    console.log('result', result);
+  } catch (error) {
+    console.log('error', (error && error.msg) || (error && error.code));
+  }
 }
 
 function writeResult({duration}) {
-  stream.write(`${moment().toISOString()},${testType},${duration}\r\n`);
+  stream.write(`${moment().format('YYYY-MM-DD HH:mm:ss')},${testType},${duration}\r\n`);
 }
 
 const obs = new PerformanceObserver((list, observer) => {
   const {duration} = list.getEntries()[0];
-  console.log('duration', duration, 'ms');
+  console.log(moment().format('YYYY-MM-DD HH:mm:ss'), 'duration', duration, 'ms');
   writeResult({duration});
-  // performance.clearMarks();
 });
 obs.observe({entryTypes: ['measure'], buffered: true});
 
@@ -131,7 +140,7 @@ rl.question('Select test type:\r\n[1] - MSSQL\r\n2 - CWAPI\r\n>', (ans) => {
 
 async function start() {
   console.log('Starting tests.  Ctrl-C to exit.');
-  console.log(`Test Settings:\r\nTest: ${testType}\r\nInterval: ${testInterval}\r\nParallelism: ${parallelism}`);
+  console.log(`Test Settings:\r\nTest: ${testType}\r\nInterval: ${testInterval / 1000}s\r\nParallelism: ${parallelism}`);
   stream = fs.createWriteStream(
     path.join(
       __dirname,
@@ -143,17 +152,17 @@ async function start() {
 
   if (testType === 'MSSQL') {
     await connectSQL();
-    await Promise.all([...new Array(parallelism)].map(() => testSQL()));
+    await Promise.all([...new Array(parallelism)].map(() => withTest(testSQL)));
   } else {
-    await Promise.all([...new Array(parallelism)].map(() => testAPI()));
+    await Promise.all([...new Array(parallelism)].map(() => withTest(testAPI)));
   }
 
   // start loop
-  setInterval(async () => {
+  setInterval(() => {
     if (testType === 'CWAPI') {
-      await Promise.all([...new Array(parallelism)].map(() => testAPI()));
+      Promise.all([...new Array(parallelism)].map(() => withTest(testAPI)));
     } else {
-      await Promise.all([...new Array(parallelism)].map(() => testSQL()));
+      Promise.all([...new Array(parallelism)].map(() => withTest(testSQL)));
     }
   }, testInterval);
 }
